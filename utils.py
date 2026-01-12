@@ -10,6 +10,14 @@ def create_brownie():
     brownie_coords = [(-2, -2), (1, -3), (3, 0), (2, 3), (-3, 2)]
     return Polygon(brownie_coords)
 
+def create_complex_polygon(num_vertices=1000):
+    """Creates a complex polygon with a specified number of vertices."""
+    angles = np.linspace(0, 2 * np.pi, num_vertices, endpoint=False)
+    radius = np.random.uniform(1, 3, num_vertices)  # Random radius for complexity
+    points = [(r * np.cos(a), r * np.sin(a)) for r, a in zip(radius, angles)]
+    print('complex polygon created with', num_vertices, 'vertices')
+    return Polygon(points)
+
 
 def create_knife(position, angle):
     """
