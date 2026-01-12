@@ -66,7 +66,7 @@ def calculate_error(cut_area, total_area):
         float: Percentage error
     """
     target_area = total_area / 2
-    error = ((cut_area - target_area) / target_area) * 100
+    error = (abs((cut_area - target_area)) / target_area) * 100
     return error
 
 
