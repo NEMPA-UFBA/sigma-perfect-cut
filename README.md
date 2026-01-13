@@ -20,7 +20,7 @@ Users face a duel: **Human Intuition vs. Machine Precision.**
 
 1. **Manual Mode:** The user tries to find the perfect cut by adjusting the angle and position sliders.
 2. **Algorithm Mode:** The machine solves the problem using **Binary Search**, demonstrating the power of logarithmic complexity ($O(\log n)$).
-3. **Chaos Mode:** Replaces the simple brownie (5 vertices) with a randomly generated polygon containing **1,000+ vertices**.
+3. **Chaos Mode:** Replaces the simple brownie (5 vertices) with a randomly generated polygon containing **300+ vertices**.
 
 ## 🧠 Mathematical Concepts
 
