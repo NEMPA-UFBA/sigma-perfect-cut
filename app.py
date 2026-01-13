@@ -5,6 +5,7 @@ from shapely.affinity import rotate
 import random
 import numpy as np
 import time
+from streamlit_local_storage import LocalStorage
 
 # Import functions from utils module
 from utils import (
@@ -16,8 +17,14 @@ from utils import (
     emoji_rain
 )
 
+audio_file = open("vitória  🔊 efeito sonoro para vídeo🔊 - Efeitos sonoros (youtube).mp3", "rb")
+audio_bytes = audio_file.read()
+audio_file_lose = open("perca.mp3", "rb")
+audio_bytes_lose = audio_file_lose.read()
+
 # --- PAGE CONFIGURATION ---
 st.set_page_config(page_title="Perfect Cut", layout="wide")
+localS = LocalStorage()
 
 # ADJUSTED CSS
 st.markdown("""
@@ -35,6 +42,9 @@ st.markdown("""
                 padding-left: 1rem;
                 padding-right: 1rem;
             }
+        }
+        audio {
+            visibility: hidden;
         }
     </style>
 """, unsafe_allow_html=True)
@@ -69,7 +79,7 @@ col_left, col_right = st.columns([1, 2], gap="large")
 
 
 def chaos_mode_changed():
-    print("chaos mode changed:", chaos_mode)    
+    print("chaos mode changed:", chaos_mode)
     reset_result()
     # Caso esteja no chaos mode...
     if not chaos_mode:
@@ -92,8 +102,7 @@ with col_left:
     if chaos_mode:
         angle = st.slider("1. Knife Angle (°)", -180.0, 0.0, st.session_state.random_angle, step=0.1, on_change=reset_result)
         angle = abs(angle)
-        print("angle selected:", angle)
-        position = st.slider("2. Knife Position", -4.0, 4.0, -4.0, step=0.05, on_change=reset_result)
+        position = st.slider("2. Knife Position", -4.0, 4.0, -4.0, step=0.01, on_change=reset_result)
     else:
         angle = st.slider("1. Knife Angle (°)", 0, 180, 0, on_change=reset_result)
         position = st.slider("2. Knife Position", -4.0, 4.0, 0.0, step=0.05, on_change=reset_result)
@@ -102,7 +111,7 @@ with col_left:
     
     # Manual Submission Button
     if st.button("🚀 SUBMIT CUT", width="content", type="primary"):
-        st.session_state.showed_result = True
+        st.session_state.showed_result = True        
     
     st.divider()
     
@@ -182,22 +191,46 @@ with sub_col_metrics:
             st.metric("Total Area", f"{total_area:.2f}")
             st.metric("Your Cut", f"{cut_area:.2f}")
             st.metric("Error", f"{error:.2f}%")
+            name = st.text_input("Enter your name for the ranking:", max_chars=20)
+            if st.button("Submit Score", type="primary", use_container_width=True):
+                if name.strip() == "":
+                    st.error("Please enter a valid name.")
+                else:
+                    # Save score to local storage
+                    ranking_data = localS.getItem("ranking")
+                    if ranking_data is None:
+                        ranking = {"chaos_mode": {}, "normal_mode": {}}
+                    else:
+                        ranking = eval(ranking_data)
+                    
+                    if chaos_mode:
+                        ranking["chaos_mode"][name] = round(error, 2)
+                    else:
+                        ranking["normal_mode"][name] = round(error, 2)
+                    localS.setItem("ranking", str(ranking))
+                    
+                    st.success(f"Score submitted! {name}: {error:.2f}%")
             
             abs_error = abs(error)
             
             if abs_error < 1.0:
                 st.success("🎯 **PERFECT CUT!** 🎉")
+                st.audio(audio_bytes, format="audio/mp3", start_time=0, autoplay=True)
+                
                 st.balloons()
                 
             elif abs_error < 2.0:
                 st.success("✨ **Super!** Great job! 👏")
+                st.audio(audio_bytes, format="audio/mp3", start_time=0, autoplay=True)
                 emoji_rain("👏") 
                 
             elif abs_error < 5.0:
                 st.info("👍 **Good attempt!** Keep refining!")
-                emoji_rain("👍") 
+                emoji_rain("👍")
+                st.audio(audio_bytes_lose, format="audio/mp3", start_time=0, end_time="5s",autoplay=True)
                 
             elif abs_error < 10.0:
+                st.audio(audio_bytes_lose, format="audio/mp3", start_time="15s", end_time="18s",autoplay=True)
                 st.warning("⚠️ **Unbalanced Split** - Try again!")
                 emoji_rain("⚠️")
                 
@@ -205,6 +238,7 @@ with sub_col_metrics:
                 st.error("😠 **Very Unbalanced!** 💢")
                 st.markdown("**Tip:** Use the Binary Search for guidance!")
                 emoji_rain("💢") 
+                st.audio(audio_bytes_lose, format="audio/mp3", start_time="15s", end_time="18s",autoplay=True)
 
 # --- BINARY SEARCH CONVERGENCE GRAPHS ---
 if st.session_state.search_history is not None:
@@ -244,6 +278,33 @@ if st.session_state.search_history is not None:
         fig_pos.tight_layout()
         st.pyplot(fig_pos, width="content")
         plt.close(fig_pos)
+
+# --- RANKING DISPLAY ---
+st.divider()
+st.markdown("### 🏅 Leaderboard")
+ranking_data = localS.getItem("ranking")
+if ranking_data is None:
+    st.info("No scores submitted yet. Be the first to play and submit your score!")
+else:
+    ranking = eval(ranking_data)
+    col_rank1, col_rank2 = st.columns(2)
+    with col_rank1:
+        st.markdown("#### 🔥 Chaos Mode")
+        if len(ranking["chaos_mode"]) == 0:
+            st.info("No scores submitted yet in Chaos Mode.")
+        else:
+            sorted_chaos = sorted(ranking["chaos_mode"].items(), key=lambda x: x[1])
+            for i, (name, score) in enumerate(sorted_chaos, start=1):
+                st.markdown(f"**{i}. {name}** - {score:.2f}% Error")
+    with col_rank2:
+        st.markdown("#### ⚖️ Normal Mode")
+        if len(ranking["normal_mode"]) == 0:
+            st.info("No scores submitted yet in Normal Mode.")
+        else:
+            sorted_normal = sorted(ranking["normal_mode"].items(), key=lambda x: x[1])
+            for i, (name, score) in enumerate(sorted_normal, start=1):
+                st.markdown(f"**{i}. {name}** - {score:.2f}% Error")
+
 
 # --- SIDEBAR (Counter and Credits) ---
 with st.sidebar:
