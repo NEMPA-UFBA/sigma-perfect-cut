@@ -2,16 +2,18 @@ import streamlit as st
 import matplotlib.pyplot as plt
 from shapely.geometry import LineString
 from shapely.affinity import rotate
+import random
 import numpy as np
 import time
 
 # Import functions from utils module
 from utils import (
     create_brownie,
-    create_knife,
+    create_complex_polygon,
     calculate_cut,
     calculate_error,
-    optimized_binary_search
+    optimized_binary_search,
+    emoji_rain
 )
 
 # --- PAGE CONFIGURATION ---
@@ -54,17 +56,98 @@ def reset_result():
 brownie = create_brownie()
 total_area = brownie.area
 
+if "brownie" not in st.session_state:
+    st.session_state.brownie = brownie
+if "total_area" not in st.session_state:
+    st.session_state.total_area = total_area
+
+brownie = st.session_state.brownie
+total_area = st.session_state.total_area
+
 # --- MAIN LAYOUT ---
 col_left, col_right = st.columns([1, 2], gap="large")
 
-# LEFT COLUMN (CONTROLS)
+
+def chaos_mode_changed():
+    print("chaos mode changed:", chaos_mode)    
+    reset_result()
+    # Caso esteja no chaos mode...
+    if not chaos_mode:
+        st.session_state.brownie = create_complex_polygon()
+        st.session_state.random_angle = random.uniform(-180.0, 0.0)
+        
+        
+    # Caso NÃO esteja no chaos mode...
+    else:
+        st.session_state.brownie = create_brownie()
+    st.session_state.total_area = st.session_state.brownie.area
+
+
+# --- LEFT COLUMN (CONTROLS) ---
 with col_left:
     st.info("🎛️ **Control Panel**")
     
-    # Sliders
-    angle = st.slider("1. Knife Angle (°)", 0, 180, 0, on_change=reset_result)
-    position = st.slider("2. Knife Position", -4.0, 4.0, 0.0, step=0.05, on_change=reset_result)
-    
+    with st.container(border=True):
+        # 1. Chaos Mode Checkbox
+        chaos_mode = st.checkbox("🔥 Chaos Mode", value=False, on_change=chaos_mode_changed)
+        
+        st.divider()
+
+        # 2. AI Auto-Lock (The feature you asked for)
+        # This forces the knife to always seek the 50/50 cut based on the angle
+        ai_lock = st.toggle("🤖 AI Auto-Lock (Follow Perfect Cut)", value=False, help="Automatically adjusts position to maintain 50% area as you rotate.")
+        
+        st.write("")
+
+        # 3. Angle Slider
+        # Determine ranges based on Chaos Mode
+        if chaos_mode:
+            min_ang, max_ang = -180.0, 0.0
+            def_ang = st.session_state.random_angle
+        else:
+            min_ang, max_ang = 0.0, 180.0
+            def_ang = 0.0
+            
+        angle = st.slider(
+            "1. Knife Angle (°)", 
+            min_value=float(min_ang), 
+            max_value=float(max_ang), 
+            value=float(def_ang), 
+            step=0.5, 
+            on_change=reset_result
+        )
+
+        # 4. Position Slider Logic
+        # We define min/max for position
+        min_pos, max_pos = -4.0, 4.0
+        
+        if ai_lock:
+            # --- REAL-TIME AI CALCULATION ---
+            # Run a fast binary search (10 iterations is enough for smooth UI)
+            # to find the perfect position for the CURRENT angle.
+            fast_search = optimized_binary_search(st.session_state.brownie, angle, num_iterations=10)
+            optimal_pos = fast_search['optimal_position']
+            
+            # Clip to slider limits to prevent errors
+            optimal_pos = np.clip(optimal_pos, min_pos, max_pos)
+            
+            # Update 'position' variable
+            position = optimal_pos
+            
+            # Display DISABLED slider but with UPDATED value
+            st.slider("2. Knife Position (Auto)", min_pos, max_pos, value=float(position), disabled=True)
+            st.caption(f"🤖 AI Target: **{position:.4f}**")
+            
+        else:
+            # Manual Mode
+            position = st.slider(
+                "2. Knife Position", 
+                min_pos, max_pos, 
+                value=0.0, 
+                step=0.05, 
+                on_change=reset_result
+            )
+
     st.write("") 
     
     # Manual Submission Button
@@ -73,38 +156,29 @@ with col_left:
     
     st.divider()
     
-    # Binary Search
-    with st.expander("🕵️ Ask the Algorithm", expanded=False):
+    # Detailed Binary Search (The educational part)
+    with st.expander("🕵️ Ask the Algorithm (Step-by-Step)", expanded=False):
         num_iterations = st.number_input(
             "Number of iterations",
-            min_value=5,
-            max_value=50,
-            value=20,
-            step=1,
+            min_value=5, max_value=50, value=20, step=1,
             help="More iterations = higher precision"
         )
         
         if st.button("RUN BINARY SEARCH", width="content"):
             st.session_state.showed_result = False
-            
             progress_bar = st.progress(0)
             status_text = st.empty()
             
             # Execute binary search
-            result = optimized_binary_search(
-                brownie, 
-                angle, 
-                num_iterations=num_iterations
-            )
+            result = optimized_binary_search(st.session_state.brownie, angle, num_iterations=num_iterations)
             
-            # Visual progress animation
+            # Animation
             for i in range(num_iterations):
                 progress_bar.progress((i + 1) / num_iterations)
                 status_text.text(f"Iteration {i+1}/{num_iterations}: Error = {result['error_history'][i]:.3f}%")
                 time.sleep(0.05)
             
             st.session_state.search_history = result
-            
             st.success(f"✅ Optimal Position: {result['optimal_position']:.5f}")
             st.info(f"📊 Final Error: {result['error_history'][-1]:.5f}%")
 
@@ -143,19 +217,35 @@ with col_right:
         st.pyplot(fig, width="content")
         plt.close(fig)
 
-    with sub_col_metrics:
+with sub_col_metrics:
         st.markdown("### Results")
         if st.session_state.showed_result:
             st.metric("Total Area", f"{total_area:.2f}")
             st.metric("Your Cut", f"{cut_area:.2f}")
+            st.metric("Error", f"{error:.2f}%")
             
-            if abs(error) < 1.0:
-                st.metric("Error", f"{error:.2f}%", delta="PERFECT!")
+            abs_error = abs(error)
+            
+            if abs_error < 1.0:
+                st.success("🎯 **PERFECT CUT!** 🎉")
                 st.balloons()
+                
+            elif abs_error < 2.0:
+                st.success("✨ **Super!** Great job! 👏")
+                emoji_rain("👏") 
+                
+            elif abs_error < 5.0:
+                st.info("👍 **Good attempt!** Keep refining!")
+                emoji_rain("👍") 
+                
+            elif abs_error < 10.0:
+                st.warning("⚠️ **Unbalanced Split** - Try again!")
+                emoji_rain("⚠️")
+                
             else:
-                st.metric("Error", f"{error:.2f}%", delta="Fail", delta_color="inverse")
-        else:
-            st.info("Adjust sliders & click SUBMIT.")
+                st.error("😠 **Very Unbalanced!** 💢")
+                st.markdown("**Tip:** Use the Binary Search for guidance!")
+                emoji_rain("💢") 
 
 # --- BINARY SEARCH CONVERGENCE GRAPHS ---
 if st.session_state.search_history is not None:
@@ -198,10 +288,37 @@ if st.session_state.search_history is not None:
 
 # --- SIDEBAR (Counter and Credits) ---
 with st.sidebar:
-    st.markdown("---")
-    st.markdown("### 🌍 Visitor Tracker")
+    st.divider()
     
-    # Simplified visitor counter that works
+    st.markdown("### 🏆 The Team (NEMPA)")
+    
+    # Project Lead
+    st.markdown("**Project Lead**")
+    st.markdown("👨‍🏫 *Prof. Dr. Roberto Sant'Anna*")
+    
+    st.write("") # Espaço para separar
+    
+    # Lead Dev
+    st.markdown("**Lead Developer**")
+    st.markdown("🛠️ *Enzo Ribeiro*")
+    
+    st.write("")
+    
+    # Core Dev (Reconhecimento técnico)
+    st.markdown("**Core Developer**")
+    st.markdown("🧠 *Ikaro Vieira*")
+    
+    st.write("")
+
+    # Scientific Devs (O time de apoio)
+    st.markdown("**Scientific Developers**")
+    st.markdown("💻 *Felipe Brasileiro*")
+    st.markdown("💻 *Iago Nunes*")
+
+    st.divider()
+    
+    # Visitor Counter (Mantivemos o código do contador)
+    st.markdown("### 🌍 Visitor Tracker")
     st.markdown("""
          <a href="https://info.flagcounter.com/50Hp">
                 <img src="https://s01.flagcounter.com/count2/50Hp/bg_FFFFFF/txt_000000/border_CCCCCC/columns_2/maxflags_10/viewers_0/labels_0/pageviews_0/flags_0/percent_0/" 
@@ -210,5 +327,4 @@ with st.sidebar:
                 """, unsafe_allow_html=True)
 
     st.markdown("---")
-    st.markdown("**Developed by:** Prof. Roberto Sant'Anna")
     st.markdown("© 2026 NEMPA - UFBA")
