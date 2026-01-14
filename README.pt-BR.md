@@ -21,6 +21,7 @@ Os usuários enfrentam um duelo: **Intuição Humana vs. Precisão da Máquina.*
 1. **Modo Manual:** O usuário tenta encontrar o corte perfeito ajustando os controles de ângulo e posição.
 2. **Modo Algoritmo:** A máquina resolve o problema utilizando **Busca Binária**, demonstrando o poder da complexidade logarítmica ($O(\log n)$).
 3. **Modo Caos:** Substitui o brownie simples (5 vértices) por um polígono gerado aleatoriamente contendo **mais de 300+ vértices**.
+4. **IA Auto-Lock:** Um modo de assistência dinâmica onde a máquina calcula continuamente a posição do corte perfeito em tempo real enquanto você rotaciona a faca, visualizando o local geométrico da solução.
 
 ## 🧠 Conceitos Matemáticos
 
@@ -64,6 +65,34 @@ pip install -r requirements.txt
 ```bash
 streamlit run app.py
 ```
+
+## 📚 Recursos de Aprendizado
+
+Para aprofundar sua compreensão sobre os conceitos por trás deste projeto, recomendamos explorar os seguintes recursos:
+
+### Fundamentos Matemáticos
+
+- **Teorema do Valor Intermediário (TVI):** [Khan Academy - Introdução ao TVI](https://www.khanacademy.org/math/calculus-1/cs1-limits-continuity/cs1-intermediate-value-theorem/v/intermediate-value-theorem)
+- **Fundamentos de Topologia:** [3Blue1Brown - Conceitos Fundamentais de Topologia](https://www.youtube.com/c/3Blue1Brown)
+
+### Python
+
+- **Curso em Vídeo:** [Curso em Vídeo - YouTube](https://www.youtube.com/watch?v=S9uPNppGsGo&list=PLvE-ZAFRgX8hnECDn1v9HNTI71veL3oW0&index=2&t=2s)
+- **Documentação:** [Documentação Python](https://docs.python.org/pt-br/)
+- **W3 Schools:** [Tutorial W3 Schools](https://www.w3schools.com/python/default.asp)
+
+### Geometria Computacional
+
+- **Biblioteca Shapely:** [Documentação Oficial do Shapely](https://shapely.readthedocs.io/)
+- **Operações com Polígonos:** Aprenda sobre intersecção, união e cálculos de área
+- **Algoritmos de Geometria 2D:** Estude ray casting, intersecção de segmentos de reta e particionamento espacial
+
+### Desenvolvimento Web com Streamlit
+
+- **Documentação Oficial Streamlit:** [streamlit.io](https://streamlit.io/)
+- **Visualização Interativa:** [Guia de Componentes e Gráficos do Streamlit](https://docs.streamlit.io/library/api-reference/charts)
+
+---
 
 ## 👥 A Equipe (NEMPA – UFBA)
 
