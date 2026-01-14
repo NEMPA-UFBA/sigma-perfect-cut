@@ -18,9 +18,9 @@ from utils import (
 )
 
 # Filenames kept as original to prevent FileNotFoundError
-audio_file = open("vitória  🔊 efeito sonoro para vídeo🔊 - Efeitos sonoros (youtube).mp3", "rb")
+audio_file = open("assets/audios/vitória  🔊 efeito sonoro para vídeo🔊 - Efeitos sonoros (youtube).mp3", "rb")
 audio_bytes = audio_file.read()
-audio_file_lose = open("perca.mp3", "rb")
+audio_file_lose = open("assets/audios/perca.mp3", "rb")
 audio_bytes_lose = audio_file_lose.read()
 
 # --- PAGE CONFIGURATION ---
